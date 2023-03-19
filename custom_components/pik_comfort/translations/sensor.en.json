@@ -11,10 +11,11 @@
             "processing": "Processing",
             "completed": "Completed",
             "denied": "Denied",
+            "closed": "Closed",
             "unknown": "[%key:common::state::unknown%]"
         },
         "monetary": {
-            "0.0": "Оплачен"
+            "0.0": "Paid"
         }
     }
 }

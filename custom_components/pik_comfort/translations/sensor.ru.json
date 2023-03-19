@@ -11,6 +11,7 @@
             "processing": "В работе",
             "completed": "Выполнена",
             "denied": "Отклонена",
+            "closed": "Закрыта",
             "unknown": "[%key:common::state::unknown%]"
         },
         "monetary": {
