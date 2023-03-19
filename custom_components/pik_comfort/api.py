@@ -1313,6 +1313,17 @@ class TurnoverBalanceRecord(_BaseIdentifiableModel):
         self.total = json_data["total"]
 
 
+class TariffType(IntEnum):
+    UNKNOWN = 0
+    DAY = 1
+    NIGHT = 2
+    MORNING_EVENING = 3
+
+    @classmethod
+    def _missing_(cls, value):
+        return cls.UNKNOWN
+
+
 class MeterResourceType(IntEnum):
     UNKNOWN = 0
     COLD_WATER = 1
@@ -1542,6 +1553,10 @@ class Tariff(_BaseModel):
                 target_list.remove(current_tariff)
             else:
                 cleanup.remove(current_tariff.type)
+
+    @property
+    def tariff_type(self) -> TariffType:
+        return TariffType(self.type)
 
 
 class PaymentStatus(IntEnum):
