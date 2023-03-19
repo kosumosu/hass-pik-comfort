@@ -902,6 +902,7 @@ class TicketStatus(IntEnum):
     PROCESSING = 201
     COMPLETED = 202
     DENIED = 203
+    CLOSED = 204
 
 
 @attr.s(slots=True)
