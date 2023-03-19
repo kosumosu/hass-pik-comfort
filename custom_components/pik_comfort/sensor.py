@@ -17,6 +17,10 @@ from custom_components.pik_comfort.api import (
     PikComfortAPI,
     PikComfortTicket,
     TicketStatus,
+    PikComfortMeter,
+    Tariff,
+    MeterResourceType,
+
 )
 from custom_components.pik_comfort.const import ATTRIBUTION, DATA_ENTITIES
 
@@ -44,6 +48,9 @@ async def async_process_update(
 
     ticket_entities = entities.get(PikComfortTicketSensor, [])
     old_ticket_entities = list(ticket_entities)
+
+    tariff_entities = entities.get(PikComfortMeterTariffSensor, [])
+    old_tariff_entities = list(tariff_entities)
 
     # Process accounts
     for account in api_object.info.accounts:
@@ -98,10 +105,30 @@ async def async_process_update(
             else:
                 existing_entity.async_schedule_update_ha_state(force_refresh=False)
 
+        # Process meters
+        for meter in account.meters:
+            for tariff in meter.tariffs:
+                tariff_key = (meter.id, tariff.type)
+                existing_entity = None
+                for entity in tariff_entities:
+                    if (entity.meter_id, entity.tariff_type) == tariff_key:
+                        existing_entity = entity
+                        old_tariff_entities.remove(existing_entity)
+                        break
+                if existing_entity is None:
+                    new_entities.append(
+                        PikComfortMeterTariffSensor(config_entry_id,
+                                                    *account_key, *tariff_key)
+                    )
+                else:
+                    existing_entity.async_schedule_update_ha_state(
+                        force_refresh=False)
+
     for entity in chain(
         old_ticket_entities,
         old_last_payment_entities,
         old_last_receipt_entities,
+        old_tariff_entities,
     ):
         _LOGGER.debug(f"Scheduling entity {entity} for removal")
         remove_tasks.append(hass.async_create_task(entity.async_remove()))
@@ -391,4 +418,111 @@ class PikComfortLastReceiptSensor(BasePikComfortEntity):
             "account_type": account_object.type,
             "account_number": account_object.number,
             ATTR_ATTRIBUTION: ATTRIBUTION,
+        }
+
+
+class PikComfortMeterTariffSensor(BasePikComfortEntity):
+    tariff: Tariff
+    meter: PikComfortMeter
+
+    def __init__(
+        self,
+        config_entry_id: str,
+        account_type: str,
+        account_id: str,
+        meter_id: str,
+        tariff_type: str,
+    ) -> None:
+        super().__init__(config_entry_id, account_type, account_id)
+        self.meter_id: str = meter_id
+        self.tariff_type: str = tariff_type
+
+    @property
+    def meter_object(self) -> Optional[PikComfortMeter]:
+        info = self.api_object.info
+
+        if info is None:
+            return None
+
+        key = self.meter_id
+        for account in info.accounts:
+            for meter in account.meters:
+                if meter.id == key:
+                    return meter
+
+        return None
+
+    @property
+    def tariff_object(self) -> Optional[Tariff]:
+        key = self.tariff_type
+        meter = self.meter_object
+        for tariff in meter.tariffs:
+            if tariff.type == key:
+                return tariff
+        return None
+
+    @property
+    def icon(self) -> str:
+        rt = self.meter_object.resource_type
+        if rt == MeterResourceType.COLD_WATER:
+            return "mdi:water-outline"
+        elif rt == MeterResourceType.HOT_WATER:
+            return "mdi:water"
+        elif rt == MeterResourceType.ELECTRICITY:
+            return "mdi:meter-electric"
+        elif rt == MeterResourceType.HEATING:
+            return "mdi:heating-coil"
+        return "mdi:counter"
+
+    @property
+    def unit_of_measurement(self) -> str:
+        return self.meter_object.unit_name
+
+    @property
+    def name(self) -> str:
+        rt = self.meter_object.resource_type
+        if rt == MeterResourceType.ELECTRICITY:
+            tt = self.tariff_object.tariff_type
+            return f'{rt.name.lower()} ({tt.name.lower().replace(" ", "")})'
+        return rt.name.lower()
+
+    @property
+    def unique_id(self) -> str:
+        return f"meter_tariff__{self.meter_id}__{self.tariff_type}"
+
+    @property
+    def available(self) -> bool:
+        return bool(self.tariff_object and self.tariff_object.value)
+
+    @property
+    def state(self) -> float:
+        value = self.tariff_object.value
+        if value is None:
+            return STATE_UNAVAILABLE
+
+        return value
+
+    @property
+    def device_class(self) -> str:
+        types = {
+            MeterResourceType.COLD_WATER: "water",
+            MeterResourceType.HOT_WATER: "water",
+            MeterResourceType.ELECTRICITY: "energy",
+            MeterResourceType.HEATING: "energy",
+        }
+        return types.get(self.meter_object.resource_type)
+
+    @property
+    def device_state_attributes(self) -> Optional[Mapping[str, Any]]:
+        tariff = self.tariff_object
+
+        if tariff is None:
+            return None
+
+        return {
+            "type": tariff.type,
+            "value": tariff.value,
+            "user_value": tariff.value,
+            "user_value_created": tariff.user_value_created,
+            "user_value_updated": tariff.user_value_updated,
         }
