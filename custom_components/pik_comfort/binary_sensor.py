@@ -194,7 +194,7 @@ class PikComfortMeterSensor(BasePikComfortEntity, BinarySensorEntity):
         return "pik_comfort_meter"
 
     @property
-    def device_state_attributes(self) -> Mapping[str, Any]:
+    def extra_state_attributes(self) -> Mapping[str, Any]:
         meter_object = self.meter_object
         device_state_attributes = {
             ATTR_DEVICE_CLASS: "pik_comfort_meter",

@@ -3,8 +3,9 @@ import logging
 from itertools import chain
 from typing import Any, Dict, List, Mapping, Optional, Type, TypeVar
 
+from homeassistant.components.sensor import SensorStateClass, SensorEntity, SensorDeviceClass
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_ATTRIBUTION, STATE_UNAVAILABLE
+from homeassistant.const import ATTR_ATTRIBUTION, STATE_UNAVAILABLE, UnitOfEnergy
 from homeassistant.helpers.typing import HomeAssistantType
 
 from custom_components.pik_comfort import DOMAIN
@@ -118,7 +119,7 @@ async def async_process_update(
                 if existing_entity is None:
                     new_entities.append(
                         PikComfortMeterTariffSensor(config_entry_id,
-                                                    *account_key, *tariff_key)
+                                                    account.type, account.id, *tariff_key)
                     )
                 else:
                     existing_entity.async_schedule_update_ha_state(
@@ -156,7 +157,7 @@ async def async_setup_entry(
 _LOGGER = logging.getLogger(__name__)
 
 
-class PikComfortLastPaymentSensor(BasePikComfortEntity):
+class PikComfortLastPaymentSensor(SensorEntity, BasePikComfortEntity):
     @property
     def icon(self) -> str:
         account_object = self.account_object
@@ -234,7 +235,7 @@ class PikComfortLastPaymentSensor(BasePikComfortEntity):
         }
 
 
-class PikComfortTicketSensor(BasePikComfortEntity):
+class PikComfortTicketSensor(SensorEntity, BasePikComfortEntity):
     def __init__(
         self,
         config_entry_id: str,
@@ -243,7 +244,8 @@ class PikComfortTicketSensor(BasePikComfortEntity):
         ticket_type: str,
         ticket_id: str,
     ) -> None:
-        super().__init__(config_entry_id, account_type, account_id)
+        SensorEntity.__init__(self)
+        BasePikComfortEntity.__init__(config_entry_id, account_type, account_id)
 
         self.ticket_type: str = ticket_type
         self.ticket_id: str = ticket_id
@@ -313,11 +315,11 @@ class PikComfortTicketSensor(BasePikComfortEntity):
         return ticket_object.status.name.lower()
 
     @property
-    def device_state_attributes(self) -> Optional[Mapping[str, Any]]:
+    def extra_state_attributes(self) -> Mapping[str, Any]:
         ticket_object = self._ticket_object
 
         if ticket_object is None:
-            return None
+            return { }
 
         account_object = self.account_object
 
@@ -341,7 +343,7 @@ class PikComfortTicketSensor(BasePikComfortEntity):
         }
 
 
-class PikComfortLastReceiptSensor(BasePikComfortEntity):
+class PikComfortLastReceiptSensor(SensorEntity, BasePikComfortEntity):
     @property
     def icon(self) -> str:
         account_object = self.account_object
@@ -393,11 +395,11 @@ class PikComfortLastReceiptSensor(BasePikComfortEntity):
         return "monetary"
 
     @property
-    def device_state_attributes(self) -> Optional[Mapping[str, Any]]:
+    def extra_state_attributes(self) -> Mapping[str, Any]:
         last_receipt = self.account_object.last_receipt
 
         if last_receipt is None:
-            return None
+            return { }
 
         account_object = self.account_object
 
@@ -420,8 +422,13 @@ class PikComfortLastReceiptSensor(BasePikComfortEntity):
             ATTR_ATTRIBUTION: ATTRIBUTION,
         }
 
+unitsMap = {
+    "кВт⋅ч": {"unit": "kWh", "scale": 1.0},
+    "м³":  {"unit": "m³", "scale": 1.0},
+    "Гкал":  {"unit": "GJ", "scale": 4.1868},
+}
 
-class PikComfortMeterTariffSensor(BasePikComfortEntity):
+class PikComfortMeterTariffSensor(SensorEntity, BasePikComfortEntity):
     tariff: Tariff
     meter: PikComfortMeter
 
@@ -433,7 +440,8 @@ class PikComfortMeterTariffSensor(BasePikComfortEntity):
         meter_id: str,
         tariff_type: str,
     ) -> None:
-        super().__init__(config_entry_id, account_type, account_id)
+        SensorEntity.__init__(self)
+        BasePikComfortEntity.__init__(config_entry_id, account_type, account_id)
         self.meter_id: str = meter_id
         self.tariff_type: str = tariff_type
 
@@ -476,15 +484,19 @@ class PikComfortMeterTariffSensor(BasePikComfortEntity):
 
     @property
     def unit_of_measurement(self) -> str:
-        return self.meter_object.unit_name
+        compatibleUnit = unitsMap[self.meter_object.unit_name]
+        if compatibleUnit is None:
+            return self.meter_object.unit_name
+        return compatibleUnit["unit"]
 
     @property
     def name(self) -> str:
         rt = self.meter_object.resource_type
+        base_name = f"{rt.name.lower()} #{self.meter_object.factory_number}" if self.meter_object.factory_number is not None else rt.name.lower()
         if rt == MeterResourceType.ELECTRICITY:
             tt = self.tariff_object.tariff_type
-            return f'{rt.name.lower()} ({tt.name.lower().replace(" ", "")})'
-        return rt.name.lower()
+            return f'{base_name} ({tt.name.lower().replace(" ", "")})'
+        return base_name
 
     @property
     def unique_id(self) -> str:
@@ -500,29 +512,37 @@ class PikComfortMeterTariffSensor(BasePikComfortEntity):
         if value is None:
             return STATE_UNAVAILABLE
 
-        return value
+        compatibleUnit = unitsMap[self.meter_object.unit_name]
+        if compatibleUnit is None:
+            return value
+        
+        return value * compatibleUnit["scale"]
 
     @property
-    def device_class(self) -> str:
+    def device_class(self) -> SensorDeviceClass:
         types = {
-            MeterResourceType.COLD_WATER: "water",
-            MeterResourceType.HOT_WATER: "water",
-            MeterResourceType.ELECTRICITY: "energy",
-            MeterResourceType.HEATING: "energy",
+            MeterResourceType.COLD_WATER: SensorDeviceClass.WATER,
+            MeterResourceType.HOT_WATER: SensorDeviceClass.WATER,
+            MeterResourceType.ELECTRICITY: SensorDeviceClass.ENERGY,
+            MeterResourceType.HEATING: SensorDeviceClass.ENERGY,
         }
         return types.get(self.meter_object.resource_type)
+    
+    @property
+    def state_class(self):
+        return SensorStateClass.TOTAL
 
     @property
-    def device_state_attributes(self) -> Optional[Mapping[str, Any]]:
+    def extra_state_attributes(self) -> Mapping[str, Any]:
         tariff = self.tariff_object
 
         if tariff is None:
-            return None
+            return { }
 
         return {
             "type": tariff.type,
             "value": tariff.value,
             "user_value": tariff.value,
             "user_value_created": tariff.user_value_created,
-            "user_value_updated": tariff.user_value_updated,
+            "user_value_updated": tariff.user_value_updated
         }
