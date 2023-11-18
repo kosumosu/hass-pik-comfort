@@ -8,7 +8,7 @@ from typing import Any, ClassVar, Dict, Final, Optional, Tuple
 
 import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry, ConfigFlow, OptionsFlow
-from homeassistant.const import CONF_BASE, CONF_SCAN_INTERVAL, CONF_TOKEN
+from homeassistant.const import CONF_BASE, CONF_SCAN_INTERVAL, CONF_TOKEN, CONF_PASSWORD
 from homeassistant.data_entry_flow import FlowHandler
 from homeassistant.helpers import config_validation as cv
 from homeassistant.util.dt import as_local
@@ -32,8 +32,6 @@ from custom_components.pik_comfort.const import (
 _LOGGER = logging.getLogger(__name__)
 
 CONF_REQUEST_NEW_TOKEN: Final = "request_new_token"
-CONF_REQUEST_NEW_OTP_CODE: Final = "request_new_otp_code"
-CONF_OTP_CODE: Final = "otp_code"
 
 
 def _format_phone_number(phone_number: str) -> str:
@@ -81,60 +79,47 @@ class _WithOTPInput(FlowHandler, ABC):
         self._device_name: str = get_random_device_name()
         self._phone_number: Optional[str] = None
         self._auth_token: Optional[str] = None
-        self._otp_expires_at: Optional[float] = None
 
     @abstractmethod
     def _create_entry(self) -> Dict[str, Any]:
         raise NotImplementedError
 
-    async def async_step_otp_input(
+    async def async_step_password_input(
         self, user_input: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:
         errors = {}
         error_code = None
         error_message = None
         phone_number = self._phone_number
-        otp_expires_at = self._otp_expires_at
 
         if user_input:
-            request_new_otp_code = user_input.get(CONF_REQUEST_NEW_OTP_CODE)
-            if request_new_otp_code or time() < otp_expires_at:
-                try:
-                    async with PikComfortAPI(
-                        username=phone_number,
-                        device_name=self._device_name,
-                    ) as api_object:
-                        if request_new_otp_code:
-                            await self._async_request_otp_code(api_object)
-                        else:
-                            await api_object.async_authenticate_otp(
-                                user_input[CONF_OTP_CODE]
-                            )
-                            self._auth_token = api_object.token
-                            return self._create_entry()
-                except BaseException as error:
-                    intl_error_string, error_message, error_code = _handle_exception(
-                        phone_number, error
+            try:
+                async with PikComfortAPI(
+                    username=phone_number,
+                    device_name=self._device_name,
+                ) as api_object:
+                    await api_object.async_authenticate(
+                        user_input[CONF_PASSWORD]
                     )
-                    if intl_error_string == "server_error" and error_code == "invalid":
-                        errors[CONF_OTP_CODE] = "otp_token_invalid"
-                    else:
-                        errors[CONF_BASE] = intl_error_string
-            else:
-                errors[CONF_OTP_CODE] = "otp_token_expired"
+                    self._auth_token = api_object.token
+                    return self._create_entry()
+            except BaseException as error:
+                intl_error_string, error_message, error_code = _handle_exception(
+                    phone_number, error
+                )
+                if intl_error_string == "server_error" and error_code == "invalid":
+                    errors[CONF_PASSWORD] = "password_invalid"
+                else:
+                    errors[CONF_BASE] = intl_error_string
 
         return self.async_show_form(
-            step_id="otp_input",
+            step_id="password_input",
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_OTP_CODE): cv.string,
-                    vol.Optional(CONF_REQUEST_NEW_OTP_CODE, default=False): cv.boolean,
+                    vol.Required(CONF_PASSWORD): cv.string
                 }
             ),
             description_placeholders={
-                "will_expire_at": as_local(
-                    datetime.fromtimestamp(otp_expires_at)
-                ).isoformat(),
                 "phone_number": _format_phone_number(phone_number),
                 "error_code": error_code or "<?>",
                 "error_message": error_message or "<?>",
@@ -154,11 +139,10 @@ class _WithOTPInput(FlowHandler, ABC):
             if not api_object.is_authenticated:
                 _LOGGER.debug(
                     f"[{mask_username(phone_number)}] "
-                    f"Попытка запроса кода подтверждения СМС"
+                    f"Запрос ввода пароля"
                 )
 
-                await self._async_request_otp_code(api_object)
-                return await self.async_step_otp_input()
+                return await self.async_step_password_input()
 
             _LOGGER.debug(
                 log_prefix + "Попытка авторизации с помощью "

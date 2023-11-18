@@ -8,8 +8,7 @@
             "server_error": "Ошибка сервера ({error_code}): {error_message}",
             "request_error": "Ошибка запроса: {error_message}",
             "unknown_error": "Неизвестная ошибка: {error_message}",
-            "otp_token_invalid": "Provided OTP token is invalid! Please, check your input, and try again.",
-            "otp_token_expired": "Confirmation token expired. Please, request a new one."
+            "password_invalid": "Пароль неверный. Проверьте правильность ввода пароля."
         },
         "step": {
             "user": {
@@ -18,16 +17,15 @@
                     "device_name": "Имя устройства",
                     "token": "Токен авторизации"
                 },
-                "description": "Введите данные авторизации для приложения ПИК Комфорт.\n\nТокен авторизации не является обязательным. Без него, от Вас потребуется запросить код подтверждения на следующем шаге.",
+                "description": "Введите данные авторизации для приложения ПИК Комфорт.\n\nТокен авторизации не является обязательным. Без него, от Вас потребуется запросить пароль на следующем шаге.",
                 "title": "Авторизация"
             },
-            "otp_input": {
+            "password_input": {
                 "data": {
-                    "otp_code": "Код из СМС",
-                    "request_new_otp_code": "Запросить новый код"
+                    "password": "Пароль"
                 },
-                "description": "Введите код подтверждения из СМС, отправленного на номер: {phone_number}.\n\nКод станет недействительным после {will_expire_at}",
-                "title": "Подтверждение по СМС"
+                "description": "Введите пароль, который вы используете на сайте new.pik-comfort.ru. Он будет обменян на авторизационный токен и не будет храниться локально.",
+                "title": "Получение токена по паролю"
             }
         }
     },

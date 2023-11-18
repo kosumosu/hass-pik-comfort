@@ -257,7 +257,7 @@ class PikComfortAPI:
             )
             raise PikComfortException("Response does not contain TTL details")
 
-    async def async_authenticate_otp(self, otp_token: str) -> None:
+    async def async_authenticate(self, password: str) -> None:
         if self.username is None:
             raise PikComfortException("Username is not set")
 
@@ -265,10 +265,10 @@ class PikComfortAPI:
             "/api-token-auth/",
             data={
                 "username": self.username,
-                "password": otp_token,
+                "password": password,
                 "ttl": self._authentication_ttl,
             },
-            action_title=f"authentication with OTP token ({otp_token})",
+            action_title=f"authentication with password ({password})",
             authenticated=False,
         )
 
