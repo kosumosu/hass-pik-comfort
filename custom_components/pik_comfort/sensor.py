@@ -245,7 +245,7 @@ class PikComfortTicketSensor(SensorEntity, BasePikComfortEntity):
         ticket_id: str,
     ) -> None:
         SensorEntity.__init__(self)
-        BasePikComfortEntity.__init__(config_entry_id, account_type, account_id)
+        BasePikComfortEntity.__init__(self, config_entry_id, account_type, account_id)
 
         self.ticket_type: str = ticket_type
         self.ticket_id: str = ticket_id
@@ -441,7 +441,7 @@ class PikComfortMeterTariffSensor(SensorEntity, BasePikComfortEntity):
         tariff_type: str,
     ) -> None:
         SensorEntity.__init__(self)
-        BasePikComfortEntity.__init__(config_entry_id, account_type, account_id)
+        BasePikComfortEntity.__init__(self, config_entry_id, account_type, account_id)
         self.meter_id: str = meter_id
         self.tariff_type: str = tariff_type
 
