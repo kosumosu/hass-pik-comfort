@@ -8,6 +8,6 @@
         "binary_sensor"
     ],
     "country": "ru",
-    "homeassistant": "2021.4.6",
+    "homeassistant": "2021.11.0",
     "iot_class": "Cloud Polling"
 }
