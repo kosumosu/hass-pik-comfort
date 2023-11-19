@@ -17,7 +17,6 @@ from custom_components.pik_comfort.const import (
     DATA_FINAL_CONFIG,
     DATA_PLATFORM_ENTITY_REGISTRARS,
     DATA_UPDATE_ROUTINES,
-    DEFAULT_SCAN_INTERVAL,
     DOMAIN,
     DATA_ENTITIES,
     SUPPORTED_PLATFORMS,

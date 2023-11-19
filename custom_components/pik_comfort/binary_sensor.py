@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from typing import Any, Dict, Final, Mapping, Optional, Union
+from typing import Any, Dict, Final, Mapping, Optional, Union, final
 
 import voluptuous as vol
 from homeassistant.components import persistent_notification
@@ -8,6 +8,7 @@ from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_DEVICE_CLASS, ATTR_ENTITY_ID
 from homeassistant.helpers import config_validation as cv
+from homeassistant.helpers.config_validation import ENTITY_SERVICE_FIELDS
 from homeassistant.helpers.typing import HomeAssistantType
 
 from custom_components.pik_comfort._base import (
@@ -46,7 +47,8 @@ INDICATIONS_SEQUENCE_SCHEMA = vol.All(
 )
 
 SERVICE_PUSH_READINGS: Final = "push_readings"
-SERVICE_PUSH_READINGS_SCHEMA = {
+SERVICE_PUSH_READINGS_SCHEMA = vol.Schema({
+    **ENTITY_SERVICE_FIELDS,
     vol.Required(ATTR_READINGS): vol.Any(
         vol.All(
             cv.string,
@@ -61,8 +63,8 @@ SERVICE_PUSH_READINGS_SCHEMA = {
     vol.Optional(ATTR_NOTIFICATION, default=False): vol.Any(
         cv.boolean,
         persistent_notification.SCHEMA_SERVICE_NOTIFICATION,
-    ),
-}
+    )
+})
 
 
 async def async_process_update(
@@ -139,6 +141,7 @@ class PikComfortMeterSensor(BasePikComfortEntity, BinarySensorEntity):
         self.meter_id: str = meter_id
 
     @property
+    @final
     def meter_object(self) -> Optional[PikComfortMeter]:
         info = self.api_object.info
 
@@ -154,6 +157,7 @@ class PikComfortMeterSensor(BasePikComfortEntity, BinarySensorEntity):
         return None
 
     @property
+    @final
     def name(self) -> str:
         meter_object = self.meter_object
 
@@ -172,28 +176,32 @@ class PikComfortMeterSensor(BasePikComfortEntity, BinarySensorEntity):
         return f"{meter_name} ({type_suffix})"
 
     @property
+    @final
     def icon(self) -> str:
         return "mdi:counter"
 
     @property
+    @final
     def unique_id(self) -> str:
-        meter_object = self.meter_object
-        return "meter__" + meter_object.type + "__" + meter_object.id
+        return "meter__" + self.meter_type + "__" + self.meter_id
 
     # @property
     # def unit_of_measurement(self) -> str:
     #     return self._meter_object.unit_name
 
     @property
-    def is_on(self) -> bool:
+    @final
+    def is_on(self) -> bool | None:
         meter_object = self.meter_object
-        return meter_object.is_auto or meter_object.has_user_readings
+        return None if meter_object is None else (meter_object.is_auto or meter_object.has_user_readings)
 
     @property
+    @final
     def device_class(self) -> str:
         return "pik_comfort_meter"
 
     @property
+    @final
     def extra_state_attributes(self) -> Mapping[str, Any]:
         meter_object = self.meter_object
         device_state_attributes = {
@@ -305,29 +313,16 @@ class PikComfortMeterSensor(BasePikComfortEntity, BinarySensorEntity):
 
         hass.bus.async_fire(event_type=event_id, event_data=event_data)
 
-        notification_content: Union[bool, Mapping[str, str]] = call_data[
+        notification_content: bool = call_data[
             ATTR_NOTIFICATION
         ]
 
-        if notification_content is not False:
-            payload = {
-                persistent_notification.ATTR_TITLE: title + " - №" + meter_number,
-                persistent_notification.ATTR_NOTIFICATION_ID: event_id
-                + "_"
-                + meter_number,
-                persistent_notification.ATTR_MESSAGE: message,
-            }
-
-            if isinstance(notification_content, Mapping):
-                for key, value in notification_content.items():
-                    payload[key] = str(value).format_map(event_data)
-
-            hass.async_create_task(
-                hass.services.async_call(
-                    persistent_notification.DOMAIN,
-                    persistent_notification.SERVICE_CREATE,
-                    payload,
-                )
+        if notification_content:
+            persistent_notification.create(
+                hass,
+                message,
+                title + " - №" + meter_number,
+                event_id + "_" + meter_number,
             )
 
     async def async_service_push_readings(self, **call_data):
@@ -336,8 +331,8 @@ class PikComfortMeterSensor(BasePikComfortEntity, BinarySensorEntity):
         :param call_data: Parameters for service call
         :return:
         """
-        log_prefix = f"[{self.entity_id}] "
-        _LOGGER.debug(log_prefix + "Начало обработки передачи показаний")
+        log_prefix = f"[{self.entity_id}]"
+        _LOGGER.debug(log_prefix + " Начало обработки передачи показаний")
 
         meter_object = self.meter_object
         event_data = {ATTR_READINGS: None}

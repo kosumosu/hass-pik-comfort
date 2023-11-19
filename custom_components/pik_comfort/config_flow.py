@@ -2,7 +2,6 @@ import logging
 import re
 from abc import ABC, abstractmethod
 from collections import ChainMap
-from datetime import datetime
 from time import time
 from typing import Any, ClassVar, Dict, Final, Optional, Tuple
 
@@ -11,7 +10,6 @@ from homeassistant.config_entries import ConfigEntry, ConfigFlow, OptionsFlow
 from homeassistant.const import CONF_BASE, CONF_SCAN_INTERVAL, CONF_TOKEN, CONF_PASSWORD
 from homeassistant.data_entry_flow import FlowHandler
 from homeassistant.helpers import config_validation as cv
-from homeassistant.util.dt import as_local
 
 from custom_components.pik_comfort import mask_username
 from custom_components.pik_comfort.api import (

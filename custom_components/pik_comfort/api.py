@@ -28,7 +28,6 @@ from pytz import timezone
 
 _LOGGER = logging.getLogger(__name__)
 
-
 DEFAULT_SDK_VERSION: Final = 30
 DEFAULT_VERSION_NAME: Final = "1.10.0"
 DEFAULT_VERSION_CODE: Final = 81
@@ -66,15 +65,15 @@ class PikComfortAPI:
     BASE_PIK_URL: ClassVar[str] = "https://new-api.pik-software.ru"
 
     def __init__(
-        self,
-        username: Optional[str] = None,
-        token: Optional[str] = None,
-        authentication_ttl: int = 31536000,
-        *,
-        device_name: Optional[str] = None,
-        version_name: str = DEFAULT_VERSION_NAME,
-        version_code: int = DEFAULT_VERSION_CODE,
-        sdk_version: int = DEFAULT_SDK_VERSION,
+            self,
+            username: Optional[str] = None,
+            token: Optional[str] = None,
+            authentication_ttl: int = 31536000,
+            *,
+            device_name: Optional[str] = None,
+            version_name: str = DEFAULT_VERSION_NAME,
+            version_code: int = DEFAULT_VERSION_CODE,
+            sdk_version: int = DEFAULT_SDK_VERSION,
     ) -> None:
         self.username = username
         self.token = token
@@ -135,14 +134,14 @@ class PikComfortAPI:
         await self._session.close()
 
     async def async_request(
-        self,
-        sub_url: str,
-        *,
-        authenticated: Optional[bool] = None,
-        action_title: Optional[str] = None,
-        expected_status: Optional[int] = 200,
-        method: Optional[str] = None,
-        **kwargs,
+            self,
+            sub_url: str,
+            *,
+            authenticated: Optional[bool] = None,
+            action_title: Optional[str] = None,
+            expected_status: Optional[int] = 200,
+            method: Optional[str] = None,
+            **kwargs,
     ):
         full_url = self.BASE_PIK_URL + sub_url
 
@@ -327,13 +326,13 @@ class PikComfortAPI:
         return current_classifiers
 
     async def async_create_ticket(
-        self,
-        classifier_id: str,
-        description: str,
-        account_id: Optional[str] = None,
-        *,
-        check_account: bool = True,
-        check_classifier: bool = True,
+            self,
+            classifier_id: str,
+            description: str,
+            account_id: Optional[str] = None,
+            *,
+            check_account: bool = True,
+            check_classifier: bool = True,
     ):
         if account_id is None or check_account:
             info = self.info
@@ -418,11 +417,11 @@ class _BaseModel(ABC):
 
     @classmethod
     async def create_from_json_list(
-        cls, json_data_list: Iterable[Mapping[str, Any]], api_object: PikComfortAPI
+            cls, json_data_list: Iterable[Mapping[str, Any]], api_object: PikComfortAPI
     ):
-        return await asyncio.gather(*[
+        return list(await asyncio.gather(*[
             cls.create_from_json(json_data, api_object) for json_data in json_data_list
-        ])
+        ]))
 
 
 _T = TypeVar("_T")
@@ -435,10 +434,10 @@ class _BaseIdentifiableModel(_BaseModel, ABC):
 
     @classmethod
     async def update_list_with_models(
-        cls: Type[_T],
-        target_list: List[_T],
-        json_data_list: List[Mapping[str, Any]],
-        api_object: PikComfortAPI,
+            cls: Type[_T],
+            target_list: List[_T],
+            json_data_list: List[Mapping[str, Any]],
+            api_object: PikComfortAPI,
     ) -> None:
         cleanup: Set[Tuple[str, str]] = set()
         for item_data in json_data_list:
@@ -448,8 +447,8 @@ class _BaseIdentifiableModel(_BaseModel, ABC):
 
             for existing_object in target_list:
                 if (
-                    existing_object.type == object_type
-                    and existing_object.id == object_id
+                        existing_object.type == object_type
+                        and existing_object.id == object_id
                 ):
                     current_object = existing_object
                     break
@@ -487,7 +486,7 @@ class InfoResult(_BaseIdentifiableModel):
     @classmethod
     async def create_from_json(cls, json_data: Mapping[str, Any], api_object: PikComfortAPI):
         accounts = await PikComfortAccount.create_from_json_list(
-            json_data["accounts"], api_object
+            await cls.request_accounts(api_object, json_data["accounts"]), api_object
         )
 
         return cls(
@@ -517,7 +516,7 @@ class InfoResult(_BaseIdentifiableModel):
 
     async def update_from_json(self, json_data: Mapping[str, Any]) -> None:
         await PikComfortAccount.update_list_with_models(
-            self.accounts, json_data["accounts"], self.api
+            self.accounts, await self.request_accounts(self.api, json_data["accounts"]), self.api
         )
 
         self.id = json_data["_uid"]
@@ -533,6 +532,17 @@ class InfoResult(_BaseIdentifiableModel):
         # self.birth_date = json_data["birth_date"]
         # self.email = json_data["email"]
         self.email_verified = json_data["email_verified"]
+
+    @classmethod
+    async def request_accounts(cls, api_object, dashboard_list: List[Mapping[str, Any]]) -> List[Mapping[str, Any]]:
+        accounts_json_data = list(await asyncio.gather(*[api_object.async_request(
+            f"/api/v20/aggregate/accounts/{dashboard['_uid']}",
+            params={"tickets_size": "10"},
+            action_title="data retrieval",
+            authenticated=True,
+        ) for dashboard in dashboard_list]))
+
+        return accounts_json_data
 
 
 @attr.s(slots=True)
@@ -612,7 +622,7 @@ class PikComfortAccount(_BaseIdentifiableModel):
 
     @classmethod
     def _prepare_dates(
-        cls, json_data: Mapping[str, Any]
+            cls, json_data: Mapping[str, Any]
     ) -> Tuple[Optional[date], Optional[date], datetime]:
         last_readings_date = (
             datetime.fromisoformat(json_data["last_readings_date"]).date()
@@ -629,13 +639,7 @@ class PikComfortAccount(_BaseIdentifiableModel):
         return last_readings_date, last_turnover_date, linked_at
 
     @classmethod
-    async def create_from_json(cls, partial_json: Mapping[str, Any], api_object: PikComfortAPI):
-        id = partial_json["_uid"]
-
-        json_data = await cls.request_data(api_object, id)
-
-        _LOGGER.debug(f"[/api/v20/aggregate/accounts/]\n{json.dumps(json_data, ensure_ascii=False).encode('utf8')}")
-
+    async def create_from_json(cls, json_data: Mapping[str, Any], api_object: PikComfortAPI):
         last_readings_date, last_turnover_date, linked_at = cls._prepare_dates(
             json_data
         )
@@ -661,7 +665,7 @@ class PikComfortAccount(_BaseIdentifiableModel):
 
         return cls(
             api=api_object,
-            id=id,
+            id=json_data["_uid"],
             type=json_data["_type"],
             banned=json_data["banned"],
             address=json_data["address"],
@@ -704,22 +708,9 @@ class PikComfortAccount(_BaseIdentifiableModel):
             account_notifications=[],
         )
 
-    @classmethod
-    async def request_data(cls, api_object, id):
-        json_data = await api_object.async_request(
-            f"/api/v20/aggregate/accounts/{id}",
-            params={"tickets_size": "10"},
-            action_title="data retrieval",
-            authenticated=True,
-        )
-        
-        return json_data
-
     async def update_from_json(self, json_data: Mapping[str, Any]) -> None:
         assert self.id == json_data["_uid"], "UID does not match"
         assert self.type == json_data["_type"], "type does not match"
-
-        json_data = await self.request_data(self.api, id)
 
         await self.address_formats.update_from_json(json_data["address_formats"])
         await self.building.update_from_json(json_data["building"])
@@ -768,12 +759,12 @@ class PikComfortAccount(_BaseIdentifiableModel):
         self.linked_at = linked_at
 
     async def async_create_ticket(
-        self,
-        classifier_id: str,
-        description: str,
-        *,
-        check_classifier: bool = True,
-        check_account: bool = True,
+            self,
+            classifier_id: str,
+            description: str,
+            *,
+            check_classifier: bool = True,
+            check_account: bool = True,
     ) -> "PikComfortTicket":
         return await self.api.async_create_ticket(
             classifier_id,
@@ -937,7 +928,7 @@ class PikComfortTicket(_BaseIdentifiableModel):
 
     @staticmethod
     def _prepare_dates(
-        json_data: Mapping[str, Any]
+            json_data: Mapping[str, Any]
     ) -> Tuple[datetime, datetime, datetime]:
         last_status_changed = datetime.fromisoformat(json_data["last_status_changed"])
         created = datetime.fromisoformat(json_data["created"])
@@ -1086,10 +1077,10 @@ class PikComfortAttachmentImage(_BaseModel):
 
     @classmethod
     async def update_list_with_models(
-        cls: Type[_T],
-        target_list: List[_T],
-        json_data_list: List[Mapping[str, Any]],
-        api_object: PikComfortAPI,
+            cls: Type[_T],
+            target_list: List[_T],
+            json_data_list: List[Mapping[str, Any]],
+            api_object: PikComfortAPI,
     ) -> None:
         cleanup: Set[str] = set()
         for item_data in json_data_list:
@@ -1174,17 +1165,16 @@ class PikComfortReceipt(_BaseModel):
         self.subsidy = json_data["subsidy"]
         self.total = json_data["total"]
         self.penalty = json_data["penalty"]
-        self.contents = json_data["main"]
         # self.additional = json_data["additional"]
         self.paid = json_data.get("paid")
         self.debt = json_data.get("debt")
 
     @classmethod
     async def update_list_with_models(
-        cls: Type[_T],
-        target_list: List[_T],
-        json_data_list: List[Mapping[str, Any]],
-        api_object: PikComfortAPI,
+            cls: Type[_T],
+            target_list: List[_T],
+            json_data_list: List[Mapping[str, Any]],
+            api_object: PikComfortAPI,
     ) -> None:
         cleanup: Set[Tuple[str, date]] = set()
         for item_data in json_data_list:
@@ -1195,8 +1185,8 @@ class PikComfortReceipt(_BaseModel):
 
             for existing_receipt in target_list:
                 if (
-                    existing_receipt.type == receipt_type
-                    and existing_receipt.period == receipt_period
+                        existing_receipt.type == receipt_type
+                        and existing_receipt.period == receipt_period
                 ):
                     current_receipt = existing_receipt
                     break
@@ -1215,12 +1205,12 @@ class PikComfortReceipt(_BaseModel):
 
 @attr.s(slots=True)
 class PikComfortReceiptTurnoverGroup(_BaseIdentifiableModel):
-    #import_id: str = attr.ib()
-    #title: str = attr.ib()
-    #display_name: Optional[str] = attr.ib()
-    #address: str = attr.ib()
-    #request_phone: str = attr.ib()
-    #dispatcher_phone: str = attr.ib()
+    # import_id: str = attr.ib()
+    # title: str = attr.ib()
+    # display_name: Optional[str] = attr.ib()
+    # address: str = attr.ib()
+    # request_phone: str = attr.ib()
+    # dispatcher_phone: str = attr.ib()
     charge: float = attr.ib()
     corrections: float = attr.ib()
     payment: float = attr.ib()
@@ -1240,16 +1230,16 @@ class PikComfortReceiptTurnoverGroup(_BaseIdentifiableModel):
             api=api_object,
             id=json_data["_uid"],
             type=json_data["_type"],
-            #import_id=json_data["import_id"],
-            #title=json_data["title"],
-            #display_name=json_data["display_name"],
-            #address=json_data["address"],
-            #request_phone=json_data["request_phone"],
-            #dispatcher_phone=json_data["dispatcher_phone"],
+            # import_id=json_data["import_id"],
+            # title=json_data["title"],
+            # display_name=json_data["display_name"],
+            # address=json_data["address"],
+            # request_phone=json_data["request_phone"],
+            # dispatcher_phone=json_data["dispatcher_phone"],
             charge=json_data["charge"],
             corrections=json_data["charge_correct"],
             payment=json_data["payment"],
-            #initial=json_data["incoming_balance"],
+            # initial=json_data["incoming_balance"],
             subsidy=json_data["subsidy"],
             penalty=json_data["penalty"],
             total=json_data["total"],
@@ -1427,7 +1417,7 @@ class PikComfortMeter(_BaseIdentifiableModel):
         self.date_next_recalibration = date_next_recalibration
 
     async def async_submit_readings(
-        self, values: Union[Mapping[int, float], Iterable[float], float]
+            self, values: Union[Mapping[int, float], Iterable[float], float]
     ) -> List["PikComfortMeterReading"]:
         api = self.api
 
@@ -1466,9 +1456,9 @@ class PikComfortMeter(_BaseIdentifiableModel):
         _LOGGER.debug(f"[{self}] Performing readings submission: {request}")
 
         async with api.session.post(
-            api.BASE_PIK_URL + "/api/v2/mobile/usermeterreading-list/",
-            headers={aiohttp.hdrs.AUTHORIZATION: "Token " + api.token},
-            json=request,
+                api.BASE_PIK_URL + "/api/v2/mobile/usermeterreading-list/",
+                headers={aiohttp.hdrs.AUTHORIZATION: "Token " + api.token},
+                json=request,
         ) as request:
             if request.status != 201:
                 # @TODO: read error codes
@@ -1499,7 +1489,7 @@ class Tariff(_BaseModel):
 
     @staticmethod
     def _prepare_dates(
-        json_data: Mapping[str, Any]
+            json_data: Mapping[str, Any]
     ) -> Tuple[Optional[datetime], Optional[datetime]]:
         user_value_created = (
             datetime.fromisoformat(json_data["user_value_created"])
@@ -1541,7 +1531,7 @@ class Tariff(_BaseModel):
 
     @classmethod
     async def update_list_with_models(
-        cls: Type[_T], target_list: List[_T], json_data_list: List[Mapping[str, Any]]
+            cls: Type[_T], target_list: List[_T], json_data_list: List[Mapping[str, Any]]
     ) -> None:
         cleanup: Set[int] = set()
         for item_data in json_data_list:
@@ -1917,12 +1907,12 @@ class TicketClassifier(_BaseIdentifiableModel):
         return self.path_from[1:]
 
     async def async_create_ticket(
-        self,
-        description: str,
-        account_id: Optional[str] = None,
-        *,
-        check_classifier: bool = True,
-        check_account: bool = True,
+            self,
+            description: str,
+            account_id: Optional[str] = None,
+            *,
+            check_classifier: bool = True,
+            check_account: bool = True,
     ) -> PikComfortTicket:
         return await self.api.async_create_ticket(
             self.id,

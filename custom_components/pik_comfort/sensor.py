@@ -1,11 +1,11 @@
 import asyncio
 import logging
 from itertools import chain
-from typing import Any, Dict, List, Mapping, Optional, Type, TypeVar
+from typing import Any, Dict, List, Mapping, Optional, Type, TypeVar, final
 
 from homeassistant.components.sensor import SensorStateClass, SensorEntity, SensorDeviceClass
 from homeassistant.config_entries import ConfigEntry
-from homeassistant.const import ATTR_ATTRIBUTION, STATE_UNAVAILABLE, UnitOfEnergy
+from homeassistant.const import ATTR_ATTRIBUTION, STATE_UNAVAILABLE
 from homeassistant.helpers.typing import HomeAssistantType
 
 from custom_components.pik_comfort import DOMAIN
@@ -29,7 +29,7 @@ _TBasePikComfortEntity = TypeVar("_TBasePikComfortEntity", bound=BasePikComfortE
 
 
 async def async_process_update(
-    hass: HomeAssistantType, config_entry_id: str, async_add_entities
+        hass: HomeAssistantType, config_entry_id: str, async_add_entities
 ) -> None:
     api_object: PikComfortAPI = hass.data[DOMAIN][config_entry_id]
 
@@ -126,10 +126,10 @@ async def async_process_update(
                         force_refresh=False)
 
     for entity in chain(
-        old_ticket_entities,
-        old_last_payment_entities,
-        old_last_receipt_entities,
-        old_tariff_entities,
+            old_ticket_entities,
+            old_last_payment_entities,
+            old_last_receipt_entities,
+            old_tariff_entities,
     ):
         _LOGGER.debug(f"Scheduling entity {entity} for removal")
         remove_tasks.append(hass.async_create_task(entity.async_remove()))
@@ -142,7 +142,7 @@ async def async_process_update(
 
 
 async def async_setup_entry(
-    hass: HomeAssistantType, config_entry: ConfigEntry, async_add_entities
+        hass: HomeAssistantType, config_entry: ConfigEntry, async_add_entities
 ) -> bool:
     config_entry_id = config_entry.entry_id
 
@@ -181,9 +181,9 @@ class PikComfortLastPaymentSensor(SensorEntity, BasePikComfortEntity):
 
         else:
             account_id = (
-                account_object.number
-                or account_object.premise_number
-                or account_object.id
+                    account_object.number
+                    or account_object.premise_number
+                    or account_object.id
             )
 
         return f"Last Payment {account_id}"
@@ -198,7 +198,7 @@ class PikComfortLastPaymentSensor(SensorEntity, BasePikComfortEntity):
         return bool(account_object and account_object.last_payment)
 
     @property
-    def state(self) -> str:
+    def native_value(self) -> str:
         last_payment = self.account_object.last_payment
         if last_payment is None:
             return STATE_UNAVAILABLE
@@ -237,12 +237,12 @@ class PikComfortLastPaymentSensor(SensorEntity, BasePikComfortEntity):
 
 class PikComfortTicketSensor(SensorEntity, BasePikComfortEntity):
     def __init__(
-        self,
-        config_entry_id: str,
-        account_type: str,
-        account_id: str,
-        ticket_type: str,
-        ticket_id: str,
+            self,
+            config_entry_id: str,
+            account_type: str,
+            account_id: str,
+            ticket_type: str,
+            ticket_id: str,
     ) -> None:
         SensorEntity.__init__(self)
         BasePikComfortEntity.__init__(self, config_entry_id, account_type, account_id)
@@ -306,7 +306,7 @@ class PikComfortTicketSensor(SensorEntity, BasePikComfortEntity):
         return f"Ticket №{ticket_id}"
 
     @property
-    def state(self) -> str:
+    def native_value(self) -> str:
         ticket_object = self._ticket_object
 
         if ticket_object is None:
@@ -319,7 +319,7 @@ class PikComfortTicketSensor(SensorEntity, BasePikComfortEntity):
         ticket_object = self._ticket_object
 
         if ticket_object is None:
-            return { }
+            return {}
 
         account_object = self.account_object
 
@@ -358,7 +358,7 @@ class PikComfortLastReceiptSensor(SensorEntity, BasePikComfortEntity):
         return "mdi:text-box"
 
     @property
-    def unit_of_measurement(self) -> str:
+    def suggested_unit_of_measurement(self) -> str:
         return "RUB"
 
     @property
@@ -368,7 +368,7 @@ class PikComfortLastReceiptSensor(SensorEntity, BasePikComfortEntity):
             return f"Last Receipt {self.account_id}"
 
         account_id = (
-            account_object.number or account_object.premise_number or account_object.id
+                account_object.number or account_object.premise_number or account_object.id
         )
         return f"Last Receipt {account_id}"
 
@@ -382,11 +382,11 @@ class PikComfortLastReceiptSensor(SensorEntity, BasePikComfortEntity):
         return bool(account_object and account_object.last_receipt)
 
     @property
-    def state(self) -> float:
+    def native_value(self) -> float | None:
         last_receipt = self.account_object.last_receipt
 
         if last_receipt is None:
-            return STATE_UNAVAILABLE
+            return None
 
         return last_receipt.total - (last_receipt.paid or 0.0)
 
@@ -399,7 +399,7 @@ class PikComfortLastReceiptSensor(SensorEntity, BasePikComfortEntity):
         last_receipt = self.account_object.last_receipt
 
         if last_receipt is None:
-            return { }
+            return {}
 
         account_object = self.account_object
 
@@ -422,23 +422,25 @@ class PikComfortLastReceiptSensor(SensorEntity, BasePikComfortEntity):
             ATTR_ATTRIBUTION: ATTRIBUTION,
         }
 
+
 unitsMap = {
     "кВт⋅ч": {"unit": "kWh", "scale": 1.0},
-    "м³":  {"unit": "m³", "scale": 1.0},
-    "Гкал":  {"unit": "GJ", "scale": 4.1868},
+    "м³": {"unit": "m³", "scale": 1.0},
+    "Гкал": {"unit": "GJ", "scale": 4.1868},
 }
+
 
 class PikComfortMeterTariffSensor(SensorEntity, BasePikComfortEntity):
     tariff: Tariff
     meter: PikComfortMeter
 
     def __init__(
-        self,
-        config_entry_id: str,
-        account_type: str,
-        account_id: str,
-        meter_id: str,
-        tariff_type: str,
+            self,
+            config_entry_id: str,
+            account_type: str,
+            account_id: str,
+            meter_id: str,
+            tariff_type: str,
     ) -> None:
         SensorEntity.__init__(self)
         BasePikComfortEntity.__init__(self, config_entry_id, account_type, account_id)
@@ -470,6 +472,7 @@ class PikComfortMeterTariffSensor(SensorEntity, BasePikComfortEntity):
         return None
 
     @property
+    @final
     def icon(self) -> str:
         rt = self.meter_object.resource_type
         if rt == MeterResourceType.COLD_WATER:
@@ -483,13 +486,15 @@ class PikComfortMeterTariffSensor(SensorEntity, BasePikComfortEntity):
         return "mdi:counter"
 
     @property
-    def unit_of_measurement(self) -> str:
-        compatibleUnit = unitsMap[self.meter_object.unit_name]
-        if compatibleUnit is None:
+    @final
+    def native_unit_of_measurement(self) -> str:
+        compatible_unit = unitsMap[self.meter_object.unit_name]
+        if compatible_unit is None:
             return self.meter_object.unit_name
-        return compatibleUnit["unit"]
+        return compatible_unit["unit"]
 
     @property
+    @final
     def name(self) -> str:
         rt = self.meter_object.resource_type
         base_name = f"{rt.name.lower()} #{self.meter_object.factory_number}" if self.meter_object.factory_number is not None else rt.name.lower()
@@ -499,26 +504,30 @@ class PikComfortMeterTariffSensor(SensorEntity, BasePikComfortEntity):
         return base_name
 
     @property
+    @final
     def unique_id(self) -> str:
         return f"meter_tariff__{self.meter_id}__{self.tariff_type}"
 
     @property
+    @final
     def available(self) -> bool:
         return bool(self.tariff_object and self.tariff_object.value)
 
     @property
-    def state(self) -> float:
+    @final
+    def native_value(self) -> float:
         value = self.tariff_object.value
         if value is None:
             return STATE_UNAVAILABLE
 
-        compatibleUnit = unitsMap[self.meter_object.unit_name]
-        if compatibleUnit is None:
+        compatible_unit = unitsMap[self.meter_object.unit_name]
+        if compatible_unit is None:
             return value
-        
-        return value * compatibleUnit["scale"]
+
+        return value * compatible_unit["scale"]
 
     @property
+    @final
     def device_class(self) -> SensorDeviceClass:
         types = {
             MeterResourceType.COLD_WATER: SensorDeviceClass.WATER,
@@ -527,17 +536,19 @@ class PikComfortMeterTariffSensor(SensorEntity, BasePikComfortEntity):
             MeterResourceType.HEATING: SensorDeviceClass.ENERGY,
         }
         return types.get(self.meter_object.resource_type)
-    
+
     @property
+    @final
     def state_class(self):
         return SensorStateClass.TOTAL
 
     @property
+    @final
     def extra_state_attributes(self) -> Mapping[str, Any]:
         tariff = self.tariff_object
 
         if tariff is None:
-            return { }
+            return {}
 
         return {
             "type": tariff.type,

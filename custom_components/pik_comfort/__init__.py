@@ -162,10 +162,7 @@ SERVICE_SEARCH_TICKET_CLASSIFIERS: Final = "search_ticket_classifiers"
 SERVICE_SEARCH_TICKET_CLASSIFIERS_SCHEMA: Final = vol.Schema(
     {
         vol.Required(ATTR_QUERY): cv.string_with_no_html,
-        vol.Optional(ATTR_NOTIFICATION, default=False): vol.Any(
-            cv.boolean,
-            persistent_notification.SCHEMA_SERVICE_NOTIFICATION,
-        ),
+        vol.Optional(ATTR_NOTIFICATION, default=False): cv.boolean,
         vol.Optional(ATTR_MAX_RESULTS, default=DEFAULT_MAX_RESULTS): vol.All(
             vol.Coerce(int), vol.Range(min=1, min_included=True)
         ),
@@ -325,23 +322,12 @@ async def async_service_search_ticket_classifiers(
     hass.bus.async_fire(event_id, event_data)
 
     notification_content = service_call.data.get(ATTR_NOTIFICATION)
-    if notification_content is not False:
-        payload = {
-            persistent_notification.ATTR_TITLE: f"Результаты поиска классификаторов",
-            persistent_notification.ATTR_NOTIFICATION_ID: event_id,
-            persistent_notification.ATTR_MESSAGE: message,
-        }
-
-        if isinstance(notification_content, Mapping):
-            for key, value in notification_content.items():
-                payload[key] = str(value).format_map(event_data)
-
-        hass.async_create_task(
-            hass.services.async_call(
-                persistent_notification.DOMAIN,
-                persistent_notification.SERVICE_CREATE,
-                payload,
-            )
+    if notification_content:
+        persistent_notification.create(
+            hass,
+            message,
+            f"Результаты поиска классификаторов",
+            event_id,
         )
 
 
