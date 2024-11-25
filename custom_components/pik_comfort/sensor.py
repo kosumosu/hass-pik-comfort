@@ -357,9 +357,6 @@ class PikComfortLastReceiptSensor(SensorEntity, BasePikComfortEntity):
 
         return "mdi:text-box"
 
-    @property
-    def suggested_unit_of_measurement(self) -> str:
-        return "RUB"
 
     @property
     def name(self) -> str:
@@ -392,7 +389,7 @@ class PikComfortLastReceiptSensor(SensorEntity, BasePikComfortEntity):
 
     @property
     def device_class(self) -> str:
-        return "monetary"
+        return SensorDeviceClass.MONETARY
 
     @property
     def extra_state_attributes(self) -> Mapping[str, Any]:
