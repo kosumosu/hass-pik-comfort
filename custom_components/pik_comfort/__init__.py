@@ -22,10 +22,10 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.components import persistent_notification
 from homeassistant.const import CONF_SCAN_INTERVAL, CONF_TOKEN, CONF_USERNAME
-from homeassistant.core import ServiceCall
+from homeassistant.core import ServiceCall, HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.typing import ConfigType, HomeAssistantType
+from homeassistant.helpers.typing import ConfigType
 
 from custom_components.pik_comfort.api import (
     PikComfortAPI,
@@ -104,7 +104,7 @@ def mask_username(username: str):
 
 
 # noinspection PyUnusedLocal
-async def async_setup(hass: HomeAssistantType, config: ConfigType):
+async def async_setup(hass: HomeAssistant, config: ConfigType):
     """Set up the Pik Comfort component."""
 
     # @TODO: move placeholder creation here
@@ -113,7 +113,7 @@ async def async_setup(hass: HomeAssistantType, config: ConfigType):
 
 
 async def async_migrate_entry(
-    hass: HomeAssistantType, config_entry: config_entries.ConfigEntry
+    hass: HomeAssistant, config_entry: config_entries.ConfigEntry
 ) -> bool:
     if config_entry.version > 1:
         phone_number = config_entry.data[CONF_PHONE_NUMBER]
@@ -172,7 +172,7 @@ SERVICE_SEARCH_TICKET_CLASSIFIERS_SCHEMA: Final = vol.Schema(
 
 
 async def async_service_create_ticket(
-    hass: HomeAssistantType, service_call: ServiceCall
+    hass: HomeAssistant, service_call: ServiceCall
 ):
     _LOGGER.debug(f"Creating ticket: {service_call} {hass}")
 
@@ -234,7 +234,7 @@ async def async_service_create_ticket(
 
 
 async def async_service_search_ticket_classifiers(
-    hass: HomeAssistantType, service_call: ServiceCall
+    hass: HomeAssistant, service_call: ServiceCall
 ):
     _LOGGER.debug(f"Searching ticket classifiers: {service_call} {hass}")
 
@@ -332,7 +332,7 @@ async def async_service_search_ticket_classifiers(
 
 
 async def async_setup_entry(
-    hass: HomeAssistantType, config_entry: config_entries.ConfigEntry
+    hass: HomeAssistant, config_entry: config_entries.ConfigEntry
 ):
     username = config_entry.data[CONF_PHONE_NUMBER]
     entry_id = config_entry.entry_id
@@ -396,7 +396,7 @@ async def async_setup_entry(
 
 
 async def async_reload_entry(
-    hass: HomeAssistantType,
+    hass: HomeAssistant,
     config_entry: config_entries.ConfigEntry,
 ) -> None:
     """Reload Pik Comfort entry"""
@@ -406,7 +406,7 @@ async def async_reload_entry(
 
 
 async def async_unload_entry(
-    hass: HomeAssistantType,
+    hass: HomeAssistant,
     config_entry: config_entries.ConfigEntry,
 ) -> bool:
     """Unload Pik Comfort entry"""

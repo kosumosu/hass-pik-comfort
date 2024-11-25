@@ -6,11 +6,11 @@ from typing import Any, Awaitable, Callable, Dict, Optional
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_SCAN_INTERVAL
+from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers import entity_platform
 from homeassistant.helpers.entity import Entity
 from homeassistant.helpers.event import async_track_time_interval
-from homeassistant.helpers.typing import HomeAssistantType
 
 from custom_components.pik_comfort.const import (
     CONF_PHONE_NUMBER,
@@ -104,7 +104,7 @@ class BasePikComfortEntity(Entity, ABC):
 
 
 async def async_handle_data_update(
-    hass: HomeAssistantType,
+    hass: HomeAssistant,
     config_entry_id: str,
 ) -> None:
     platform_entity_registrars = hass.data[DATA_PLATFORM_ENTITY_REGISTRARS][
@@ -137,7 +137,7 @@ async def async_handle_data_update(
 
 
 async def async_setup_entry_for_platforms(
-    hass: HomeAssistantType,
+    hass: HomeAssistant,
     config_entry: ConfigEntry,
     async_process_update: Callable[[], Awaitable[None]],
 ) -> None:
