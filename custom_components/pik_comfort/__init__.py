@@ -367,13 +367,7 @@ async def async_setup_entry(
     hass_data.setdefault(DATA_UPDATE_ROUTINES, {})
 
     # Forward entry setup to sensor platform
-    for domain in SUPPORTED_PLATFORMS:
-        hass.async_create_task(
-            hass.config_entries.async_forward_entry_setup(
-                config_entry,
-                domain,
-            )
-        )
+    await hass.config_entries.async_forward_entry_setups(config_entry, SUPPORTED_PLATFORMS)
 
     # Create options update listener
     update_listener = config_entry.add_update_listener(async_reload_entry)
