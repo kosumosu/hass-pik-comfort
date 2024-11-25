@@ -4,7 +4,7 @@
     "documentation": "https://github.com/kosumosu/hass-pik-comfort",
     "issue_tracker": "https://github.com/kosumosu/hass-pik-comfort/issues",
     "dependencies": [],
-    "version": "0.0.2",
+    "version": "0.0.3",
     "codeowners": [
         "@alryaz",
         "@tumb1er",
