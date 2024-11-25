@@ -1378,7 +1378,7 @@ class PikComfortMeter(_BaseIdentifiableModel):
             type=json_data["_type"],
             factory_number=json_data["factory_number"],
             resource_type_id=json_data["resource_type"],
-            has_user_readings=json_data["has_user_readings"],
+            has_user_readings=json_data.get("has_user_readings", False),
             is_auto=json_data["is_auto"],
             import_id=json_data["import_id"],
             meter_type=json_data["meter_type"],
@@ -1405,7 +1405,7 @@ class PikComfortMeter(_BaseIdentifiableModel):
 
         self.factory_number = json_data["factory_number"]
         self.resource_type_id = json_data["resource_type"]
-        self.has_user_readings = json_data["has_user_readings"]
+        self.has_user_readings = json_data.get("has_user_readings", False)
         self.is_auto = json_data["is_auto"]
         self.import_id = json_data["import_id"]
         self.meter_type = json_data["meter_type"]
@@ -1482,7 +1482,7 @@ class PikComfortMeter(_BaseIdentifiableModel):
 class Tariff(_BaseModel):
     type: int = attr.ib()
     value: float = attr.ib()
-    average_in_month: float = attr.ib()
+    average_in_month: Optional[float] = attr.ib(default=None)
     user_value: Optional[float] = attr.ib(default=None)
     user_value_updated: Optional[datetime] = attr.ib(default=None)
     user_value_created: Optional[datetime] = attr.ib(default=None)
@@ -1512,8 +1512,8 @@ class Tariff(_BaseModel):
             api=api_object,
             type=json_data["type"],
             value=json_data["value"],
-            average_in_month=json_data["average_in_month"],
-            user_value=json_data["user_value"],
+            average_in_month=json_data.get("average_in_month"),
+            user_value=json_data.get("user_value"),
             user_value_created=user_value_created,
             user_value_updated=user_value_updated,
         )
@@ -1524,8 +1524,8 @@ class Tariff(_BaseModel):
         user_value_created, user_value_updated = self._prepare_dates(json_data)
 
         self.value = json_data["value"]
-        self.average_in_month = json_data["average_in_month"]
-        self.user_value = json_data["user_value"]
+        self.average_in_month = json_data.get("average_in_month")
+        self.user_value = json_data.get("user_value")
         self.user_value_created = user_value_created
         self.user_value_updated = user_value_updated
 
