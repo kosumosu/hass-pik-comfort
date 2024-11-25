@@ -46,14 +46,14 @@
                     "request_new_token": "Request new authentication token",
                     "scan_interval": "Data update interval"
                 },
-                "description": ""
+                "description": "The token will expire eventually. You will have to re-authorize then."
             },
             "otp_input": {
                 "data": {
                     "otp_code": "SMS code",
                     "request_new_otp_code": "Request new code"
                 },
-                "description": "Enter confirmation code send by SMS to: {phone_number}.\n\nCode will expire after {will_expire_at}.",
+                "description": "Enter confirmation code send by SMS to: {phone_number}.\n\nThe code will expire eventually. You will have to re-authorize then.",
                 "title": "SMS Confirmation"
             }
         }
