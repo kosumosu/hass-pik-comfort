@@ -422,7 +422,9 @@ class PikComfortLastReceiptSensor(SensorEntity, BasePikComfortEntity):
 
 unitsMap = {
     "кВт⋅ч": {"unit": "kWh", "scale": 1.0},
+    "кВт-ч": {"unit": "kWh", "scale": 1.0},
     "м³": {"unit": "m³", "scale": 1.0},
+    "м3": {"unit": "m³", "scale": 1.0},
     "Гкал": {"unit": "GJ", "scale": 4.1868},
 }
 
