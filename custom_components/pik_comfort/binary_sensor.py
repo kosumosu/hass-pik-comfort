@@ -9,7 +9,6 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import ATTR_DEVICE_CLASS, ATTR_ENTITY_ID
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers import config_validation as cv
-from homeassistant.helpers.config_validation import ENTITY_SERVICE_FIELDS
 
 from custom_components.pik_comfort._base import (
     BasePikComfortEntity,
@@ -47,8 +46,7 @@ INDICATIONS_SEQUENCE_SCHEMA = vol.All(
 )
 
 SERVICE_PUSH_READINGS: Final = "push_readings"
-SERVICE_PUSH_READINGS_SCHEMA = vol.Schema({
-    **ENTITY_SERVICE_FIELDS,
+SERVICE_PUSH_READINGS_SCHEMA = cv.make_entity_service_schema({
     vol.Required(ATTR_READINGS): vol.Any(
         vol.All(
             cv.string,
