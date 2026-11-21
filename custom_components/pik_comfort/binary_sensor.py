@@ -58,10 +58,7 @@ SERVICE_PUSH_READINGS_SCHEMA = cv.make_entity_service_schema({
     ),
     vol.Optional(ATTR_IGNORE_READINGS, default=False): cv.boolean,
     vol.Optional(ATTR_INCREMENTAL, default=False): cv.boolean,
-    vol.Optional(ATTR_NOTIFICATION, default=False): vol.Any(
-        cv.boolean,
-        persistent_notification.SCHEMA_SERVICE_NOTIFICATION,
-    )
+    vol.Optional(ATTR_NOTIFICATION, default=False): cv.boolean,
 })
 
 
